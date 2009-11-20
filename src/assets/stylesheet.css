@@ -1,0 +1,116 @@
+@namespace mx "library://ns.adobe.com/flex/halo";
+
+WindowedApplication
+{
+	color: #ffffff;
+	text-roll-over-color: #ffffff;
+	theme-color: #444444;
+	font-size: 13;
+}
+
+.titleBar
+{
+	background-color: #770000;
+}
+
+.mainContent
+{
+	background-color: #595959;
+}
+
+.appTitleFirst, .appTitleSecond
+{
+	font-family: "Helvetica";
+	font-weight: bold;
+	font-size: 20;
+	color: #ffffff;
+}
+
+.appTitleSecond
+{
+	color: #ffffff;
+}
+
+.htmlCanvas
+{
+	border-color: #636363;
+	background-color: #636363;
+}
+
+.openInBrowserButton
+{
+	font-size: 9;
+}
+
+DataGrid
+{
+	header-colors: #868686, #868686;
+	border-color: #636363;
+	alternating-item-colors: #ffffff, #eeeeee;
+	color: #000000;
+	header-style-name: customHeaderStyle;
+}
+
+ProgressBar
+{
+	bar-color: #770000;
+}
+
+.customHeaderStyle
+{
+	color: #ffffff;
+	font-weight: bold;
+}
+
+mx|Button
+{
+	fill-colors: #707070, #4c4c4c;
+	highlight-alphas: 0, 0;
+	fill-alphas: 1, 1;
+	border-color: #232323;
+}
+
+ToggleButtonBar
+{
+	border-color: #ff0000;
+	horizontalGap: -1;
+}
+
+.searchInput
+{
+	background-color: #868686;
+	border-color: #333333;
+}
+
+.appCloseButton
+{
+	up-skin: Embed("/assets/close_up.png");
+	over-skin: Embed("/assets/close_over.png");
+	down-skin: Embed("/assets/close_pressed.png");
+}
+
+.appMinimizeButton
+{
+	up-skin: Embed("/assets/minimize_up.png");
+	over-skin: Embed("/assets/minimize_over.png");
+	down-skin: Embed("/assets/minimize_pressed.png");
+}
+
+.appRestoreButton
+{
+	up-skin: Embed("/assets/restore_up.png");
+	over-skin: Embed("/assets/restore_over.png");
+	down-skin: Embed("/assets/restore_over.png");
+}
+
+.appGripper
+{
+	skin: Embed("/assets/gripper.png");
+}
+
+ToolTip
+{
+	background-color: #353535;
+	border-color: #444444;
+	color: #DDDDDD;	
+}
