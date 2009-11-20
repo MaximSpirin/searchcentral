@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:WindowedApplication xmlns:mx="http://www.adobe.com/2006/mxml"
+						showFlexChrome="false"
+						layout="absolute" backgroundAlpha="0"
+						applicationComplete="onCreationComplete();"
+						showStatusBar="false">
+	<mx:Script>
+		<![CDATA[
+			import mx.controls.dataGridClasses.DataGridColumn;
+			import mx.formatters.DateFormatter;
+			import mx.collections.ArrayCollection;
+			import __AS3__.vec.Vector;
+			import mx.controls.Alert;
+			import mx.events.ItemClickEvent;
+			
+			[Bindable] private var searchTypes:Array = ["My Mac", "Google", "Wikipedia"];
+			[Bindable] private var localSearchTypes:Array = ["Contents", "File Name"];
+			
+			private var mdfindFile:File;
+			private var nativeProcess:NativeProcess;
+			private var processBuffer:ByteArray;
+			private var dateFormatter:DateFormatter;
+			
+			private var lastLocalSearch:String;
+			private var lastGoogleSearch:String;
+			private var lastWikipediaSearch:String;
+			
+			private function onCreationComplete():void
+			{
+				this.googleHtml.htmlLoader.navigateInSystemBrowser = false;
+				this.googleHtml.addEventListener(Event.LOCATION_CHANGE, onHtmlLocationChange);
+				this.googleHtml.addEventListener(Event.COMPLETE, onHtmlLoadComplete);
+
+				this.wikipediaHtml.htmlLoader.navigateInSystemBrowser = false;
+				this.wikipediaHtml.addEventListener(Event.LOCATION_CHANGE, onHtmlLocationChange);
+				this.wikipediaHtml.addEventListener(Event.COMPLETE, onHtmlLoadComplete);
+
+				this.mdfindFile = new File("/usr/bin/mdfind");
+				if (!this.mdfindFile.exists) this.mdfindFile = new File("/usr/sbin/mdfind");
+				if (!this.mdfindFile.exists) this.mdfindFile = new File("/usr/local/bin/mdfind");
+				if (!this.mdfindFile.exists) this.mdfindFile = new File("/bin/mdfind");
+				if (!this.mdfindFile.exists) this.mdfindFile = new File("/sbin/mdfind");
+				if (!this.mdfindFile.exists)
+				{
+					Alert.show("Cannot locate mdfind.", "Command Error", Alert.OK);
+				}
+				
+				this.dateFormatter = new DateFormatter();
+				this.dateFormatter.formatString = "MMM D, YYYY L:NN A";
+				
+				this.searchTerm.setFocus();
+
+				// Center the window
+				var initialBounds:Rectangle = new Rectangle((Screen.mainScreen.bounds.width / 2 - (this.width/2)), (Screen.mainScreen.bounds.height / 2 - (this.height/2)), this.width, this.height);
+				this.nativeWindow.bounds = initialBounds;				
+				this.nativeWindow.visible = true;
+			}
+			
+			private function onHtmlLocationChange(e:Event):void
+			{
+				var html:HTML = e.target as HTML;
+				this.setStatus("Loading " + html.location, true);
+			}
+
+			private function onHtmlLoadComplete(e:Event):void
+			{
+				this.setStatus("", false, true);
+			}
+			
+			private function onSearchTypeChange(e:ItemClickEvent):void
+			{
+				if (e.label == "My Mac")
+				{
+					this.view.selectedChild = fileGridContainer;
+					this.localSearchType.enabled = true;
+					this.setStatus("", false, false);
+					if (this.lastLocalSearch != this.searchTerm.text)
+					{
+						this.onSubmit();
+					}
+				}
+				else if (e.label == "Google")
+				{
+					this.view.selectedChild = googleHtmlContainer;
+					this.localSearchType.enabled = false;
+					this.setStatus("", false, true);
+					if (this.lastGoogleSearch != this.searchTerm.text)
+					{
+						this.onSubmit();
+					}
+				}
+				else if (e.label == "Wikipedia")
+				{
+					this.view.selectedChild = wikipediaHtmlContainer;
+					this.localSearchType.enabled = false;
+					this.setStatus("", false, true);
+					if (this.lastWikipediaSearch != this.searchTerm.text)
+					{
+						this.onSubmit();
+					}
+				}
+			}
+
+			private function onLocalSearchTypeChange(e:ItemClickEvent):void
+			{
+				this.onSubmit();
+			}
+			
+			private function onSubmit(e:Event=null):void
+			{
+				if (this.searchTerm.text.length == 0) return;
+				if (this.searchType.selectedIndex == 1) // Google
+				{
+					this.lastGoogleSearch = this.searchTerm.text;
+					this.googleHtml.location = "http://www.google.com/search?q=" + escape(this.searchTerm.text);
+				}
+				else if (this.searchType.selectedIndex == 2) // Wikipedia
+				{
+					this.lastWikipediaSearch = this.searchTerm.text;
+					this.wikipediaHtml.location = "http://en.wikipedia.org/w/index.php?title=Special%3ASearch&search="+escape(this.searchTerm.text)+"&fulltext=Search";
+				}
+				else if (this.searchType.selectedIndex == 0) // Desktop
+				{
+					this.lastLocalSearch = this.searchTerm.text;
+					var npInfo:NativeProcessStartupInfo = new NativeProcessStartupInfo();
+					npInfo.executable = this.mdfindFile;
+					var args:Vector.<String> = new Vector.<String>;
+					if (this.localSearchType.selectedIndex == 1)
+					{
+						args.push("-name");
+					}
+					args.push("-interpret");
+					args.push(this.searchTerm.text);
+					npInfo.arguments = args;
+					this.processBuffer = new ByteArray();
+					this.nativeProcess = new NativeProcess();
+					this.nativeProcess.addEventListener(ProgressEvent.STANDARD_OUTPUT_DATA, onStandardOutputData);
+					this.nativeProcess.addEventListener(NativeProcessExitEvent.EXIT, onStandardOutputClose);
+					this.setStatus("Searching for " + this.searchTerm.text + "...", true);
+					this.nativeProcess.start(npInfo);
+				}
+			}
+			
+			private function onDoubleClick(e:MouseEvent):void
+			{
+				var dg:DataGrid = e.currentTarget as DataGrid;
+				var item:Object = dg.selectedItem;
+				var open:File = new File("/usr/bin/open");
+				var npInfo:NativeProcessStartupInfo = new NativeProcessStartupInfo();
+				npInfo.executable = open;
+				var args:Vector.<String> = new Vector.<String>;
+				args.push(item.path);
+				npInfo.arguments = args;
+				var np:NativeProcess = new NativeProcess();
+				np.start(npInfo);
+			}
+			
+			private function onStandardOutputData(e:ProgressEvent):void
+			{
+				this.nativeProcess.standardOutput.readBytes(this.processBuffer, this.processBuffer.length);
+			}
+			
+			private function onStandardOutputClose(e:Event):void
+			{
+				var output:String = new String(this.processBuffer);
+				var outputArray:Array = output.split("\n");
+				var data:Array = new Array();
+				for each(var path:String in outputArray)
+				{
+					if (path == "") continue;
+					if (path.indexOf(".emlx") == (path.length - 5)) continue;
+					if (path.indexOf(".vRge08Message") == (path.length - 14)) continue;
+					if (path.indexOf(".webarchive") == (path.length - 11)) continue;
+					if (path.indexOf(".webhistory") == (path.length - 11)) continue;
+					if (path.indexOf(".webbookmark") == (path.length - 12)) continue;
+					if (path.indexOf(".strings") == (path.length - 8)) continue;
+					if (path.indexOf(".localized") == (path.length - 10)) continue;
+					if (path.search(/^.+-.+-.+-.+-.+\..+$/) != -1) continue;
+					var f:File = new File(path);
+					if (!f.exists) continue;
+					var o:Object = new Object();
+					if (f.isDirectory)
+					{
+						o.name = "/" + f.name;
+					}
+					else
+					{
+						o.name = f.name;
+					}
+					o.type = f.extension;
+					o.lastModified = f.modificationDate;
+					o.path = f.nativePath;
+					data.push(o);
+				}
+				var dp:ArrayCollection = new ArrayCollection(data);
+				this.fileGrid.dataProvider = dp;
+				this.setStatus(dp.length + " items found");
+			}
+
+			public function formatDate(item:Object, col:DataGridColumn):String
+			{
+				return this.dateFormatter.format(item.lastModified);
+			}
+			
+			private function openInBrowser():void
+			{
+				var urlToOpen:String = (this.searchType.selectedIndex == 1) ? this.googleHtml.location : this.wikipediaHtml.location;
+				navigateToURL(new URLRequest(urlToOpen));
+			}
+			
+			private function setStatus(msg:String, showProgress:Boolean=false, showBrowserButton:Boolean=false):void
+			{
+				this.statusMessage.text = msg;
+				this.progress.visible = showProgress;
+				this.browserButton.visible = showBrowserButton;
+			}
+			
+			private function onRestore():void
+			{
+				if (this.nativeWindow.displayState == NativeWindowDisplayState.MAXIMIZED)
+				{
+					this.nativeWindow.restore();
+					restoreButton.toolTip = "Maximize Application";
+				}
+				else
+				{
+					this.nativeWindow.maximize();
+					restoreButton.toolTip = "Restore Application";
+				}
+			}
+			
+		]]>
+	</mx:Script>
+	<mx:Style source="assets/stylesheet.css" />
+	<mx:VBox width="100%" height="100%" horizontalGap="0" verticalGap="0" styleName="mainContent">
+		<mx:Canvas id="appTitleBar" width="100%" height="30" styleName="titleBar" mouseDown="nativeWindow.startMove();" doubleClickEnabled="true" doubleClick="nativeWindow.minimize();">
+			<mx:Image source="@Embed('/assets/logo.png')" top="2" left="5"/>
+			<mx:Label text="Search" styleName="appTitleFirst" top="5" left="37"/>
+			<mx:Label text="Central" styleName="appTitleSecond" top="5" left="107"/>
+			<mx:Button styleName="appCloseButton" click="this.nativeWindow.close()" toolTip="Close Application" right="9" top="9"/>
+			<mx:Button id="restoreButton" styleName="appRestoreButton" click="onRestore();" toolTip="Maximize Application" right="23" top="9"/>
+			<mx:Button styleName="appMinimizeButton" click="this.nativeWindow.minimize()" toolTip="Minimize Application" right="36" top="9"/>
+		</mx:Canvas>
+		<mx:HBox width="100%" horizontalAlign="center" paddingLeft="4" paddingTop="4" paddingBottom="4" paddingRight="4">
+			<mx:ToggleButtonBar id="searchType" dataProvider="{searchTypes}" itemClick="onSearchTypeChange(event);"/>
+			<mx:TextInput width="100%" id="searchTerm" styleName="searchInput" enter="onSubmit(event);" focusIn="searchTerm.setSelection(0, searchTerm.length)"/>
+			<mx:Button label="Search" click="onSubmit(event);"/>
+			<mx:ToggleButtonBar id="localSearchType" dataProvider="{localSearchTypes}" itemClick="onLocalSearchTypeChange(event);"/>
+		</mx:HBox>
+		<mx:ViewStack id="view" width="100%" height="100%" creationPolicy="all">
+			<mx:Canvas id="fileGridContainer" width="100%" height="100%">
+				<mx:DataGrid id="fileGrid" width="100%" height="100%" doubleClickEnabled="true" doubleClick="onDoubleClick(event);" editable="true">
+					<mx:columns>
+						<mx:DataGridColumn headerText="Name" width="250" dataField="name" editable="false"/>
+						<mx:DataGridColumn headerText="Type" width="85" dataField="type" editable="false"/>
+						<mx:DataGridColumn headerText="Last Modified" width="170" dataField="lastModified" editable="false" labelFunction="formatDate"/>
+						<mx:DataGridColumn headerText="Path" dataField="path" editable="false"/>
+					</mx:columns>
+				</mx:DataGrid>
+			</mx:Canvas>
+			<mx:Canvas id="googleHtmlContainer" width="100%" height="100%" styleName="htmlCanvas">
+				<mx:HTML id="googleHtml" top="1" bottom="1" left="1" right="1"/>
+			</mx:Canvas>
+			<mx:Canvas id="wikipediaHtmlContainer" width="100%" height="100%" styleName="htmlCanvas">
+				<mx:HTML id="wikipediaHtml" top="1" bottom="1" left="1" right="1"/>
+			</mx:Canvas>
+		</mx:ViewStack>
+		<mx:Canvas width="100%" height="20">
+			<mx:Label id="statusMessage" left="4" bottom="0" color="#ffffff"/>
+			<mx:ProgressBar id="progress" indeterminate="true" visible="false" bottom="0" right="4" labelPlacement="right" labelWidth="0"/>
+			<mx:Button label="Open in Browser" id="browserButton" styleName="openInBrowserButton" height="16" visible="false" bottom="2" right="12" click="openInBrowser();"/>
+			<mx:Button id="appGripper" styleName="appGripper" bottom="1" right="1" mouseDown="nativeWindow.startResize(NativeWindowResize.BOTTOM_RIGHT);"/>
+		</mx:Canvas>
+	</mx:VBox>
+</mx:WindowedApplication>
