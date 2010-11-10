@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
-<application xmlns="http://ns.adobe.com/air/application/2.0beta">
+<application xmlns="http://ns.adobe.com/air/application/2.0">
 
 	<supportedProfiles>extendedDesktop desktop</supportedProfiles>
-	<id>SearchCentral</id>
+	<id>com.adobe.searchcentral</id>
 	<filename>SearchCentral</filename>
 	<name>SearchCentral</name>
-	<version>v1</version>
+	<version>1</version>
 	<description>Search your local hard drive, Google, and Wikipedia from a single application. Created by Christian Cantrell.</description>
-	<copyright>Copyright © 2009 Adobe Systems Incorporated. All rights reserved.</copyright>
+	<copyright>Copyright © 2010 Adobe Systems Incorporated. All rights reserved.</copyright>
 
 	<initialWindow>
-		<content>[This value will be overwritten by Flex Builder in the output app.xml]</content>
+		<content>[foo]</content>
 		<!-- <title></title> -->
 		<systemChrome>none</systemChrome>
 		<transparent>false</transparent>
@@ -29,7 +29,7 @@
 	<!-- <installFolder></installFolder> -->
 	<!-- <programMenuFolder></programMenuFolder> -->
 	<icon>
-		<image128x128>/assets/searchcentral_logo.png</image128x128>
+		<image128x128>assets/searchcentral_logo.png</image128x128>
 	</icon>
 
 </application>
